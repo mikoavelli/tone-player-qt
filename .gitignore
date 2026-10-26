@@ -1,0 +1,9 @@
+build/
+build-dev/
+build-san/
+/dist/
+/CMakeUserPresets.json
+*.tmp
+settings.corrupted-*.json
+.ccache/
+compile_commands.json
