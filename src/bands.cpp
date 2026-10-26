@@ -1,4 +1,7 @@
-// Equalizer logic without Qt: a set of bands and reading alignment.
+/// @file bands.cpp
+/// @brief Equalizer logic without Qt: a set of bands and reading alignment.
+///
+/// Implementation of the band operations declared in bands.h.
 #include "bands.h"
 
 #include "errors.h"
@@ -19,12 +22,19 @@ namespace {
 
 using tr_ns::tr;
 
-// Round to milliseconds in Hz, as in the original grid generator.
+/// @brief Rounds a frequency to thousandths of a hertz, as in the original grid generator.
+/// @param value Frequency, Hz.
 double tnsRound(double value)
 {
     return std::round(value * 1000.0) / 1000.0;
 }
 
+/// @brief Validates a band list and converts settings errors to band errors.
+/// @param bands Bands to validate.
+/// @param maxFrequencyHz Highest allowed frequency, Hz.
+/// @param scale Range and step of the level offsets.
+/// @return The validated bands.
+/// @throws BandError If the bands are invalid.
 QVector<Band> checked(const QVector<Band> &bands, double maxFrequencyHz,
     const LevelScale &scale)
 {

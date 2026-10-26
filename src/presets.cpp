@@ -1,4 +1,7 @@
-// Preset operations: pure functions over Settings, without Qt and files.
+/// @file presets.cpp
+/// @brief Preset operations: pure functions over Settings, without Qt and files.
+///
+/// Implementation of the preset operations declared in presets.h.
 #include "presets.h"
 
 #include "errors.h"

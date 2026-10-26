@@ -1,4 +1,7 @@
-// Streaming generator of control tones. See audio_engine.h for details.
+/// @file audio_engine.cpp
+/// @brief Streaming generator of control tones.
+///
+/// Implementation of the interface declared in audio_engine.h.
 #include "audio_engine.h"
 
 #include "errors.h"
@@ -28,6 +31,11 @@ namespace {
 
 using tr_ns::tr;
 
+/// @brief Verifies that a band level lies within the slider scale.
+/// @param levelDb Level to check, dB.
+/// @param scale Allowed range.
+/// @return The level unchanged.
+/// @throws AudioError If the level is outside the range.
 double checkedLevel(double levelDb, const LevelScale &scale)
 {
     if (!(scale.minDb <= levelDb && levelDb <= scale.maxDb)) {
@@ -37,6 +45,10 @@ double checkedLevel(double levelDb, const LevelScale &scale)
     return levelDb;
 }
 
+/// @brief Verifies that the overall level lies within the allowed range.
+/// @param masterDb Overall level to check, dB from full scale.
+/// @return The level unchanged.
+/// @throws AudioError If the level is outside the range.
 double checkedMaster(double masterDb)
 {
     if (!(masterMinDb <= masterDb && masterDb <= masterMaxDb)) {
@@ -46,7 +58,8 @@ double checkedMaster(double masterDb)
     return masterDb;
 }
 
-// Fill the internal sine table once.
+/// @brief Fills the internal sine table once at startup.
+/// @return Table of one full sine period.
 std::array<float, tableSize> makeSineTable()
 {
     std::array<float, tableSize> table = {};
@@ -58,6 +71,9 @@ std::array<float, tableSize> makeSineTable()
     return table;
 }
 
+/// @brief Builds the float sample format used by the sink.
+/// @param sampleRate Sample rate, Hz.
+/// @param count Number of channels.
 QAudioFormat makeFormat(int sampleRate, int count)
 {
     QAudioFormat format;

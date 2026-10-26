@@ -1,4 +1,5 @@
-// Preset operations: pure functions over Settings, without Qt and files.
+/// @file presets.h
+/// @brief Preset operations: pure functions over Settings, without Qt and files.
 #pragma once
 
 #include "models.h"
@@ -6,37 +7,70 @@
 #include <QString>
 #include <optional>
 
+/// @brief Creating, applying and comparing presets.
 namespace tp::presets {
 
-// Result of applying a preset.
+/// @brief Result of applying a preset.
 struct PresetApplication {
-    Settings settings;
-    // Device from the preset that does not exist on this computer; the
-    // default output device is used instead.
+    Settings settings; ///< Settings with the preset levels and device applied.
+    /// Device from the preset that does not exist on this computer; the
+    /// default output device is used instead.
     std::optional<QString> missingDevice;
 };
 
-// Name without extra spaces at the edges; throws PresetError if it is invalid.
+/// @brief Returns the name without extra spaces at the edges.
+/// @param name Raw preset name.
+/// @return Trimmed name ready for storage.
+/// @throws PresetError If the name is empty or too long.
 QString normalizeName(const QString &name);
-// Preset with the same name; case-insensitive.
+
+/// @brief Finds a preset with the same name; case-insensitive.
+/// @param settings Settings whose preset list is searched.
+/// @param name Preset name to find.
+/// @return The preset, or std::nullopt if it does not exist.
 std::optional<Preset> findPreset(const Settings &settings, const QString &name);
-// Preset levels filled to the global list size; new bands get 0 dB.
+
+/// @brief Returns preset levels filled to the global band list size; new bands get 0 dB.
+/// @param levels Stored preset levels.
+/// @param count Required number of levels.
 QVector<double> alignedLevels(const QVector<double> &levels, int count);
 
-// Save levels and the device under the name and make the preset active.
-// Frequencies are not part of a preset: the list is shared across the program.
-// An existing preset is replaced only with overwrite; it stays in place.
+/// @brief Saves levels and the device under the name and makes the preset active.
+///
+/// Frequencies are not part of a preset: the list is shared across the program.
+/// An existing preset is replaced only with @p overwrite; it stays in place.
+/// @param settings Current settings.
+/// @param name Preset name.
+/// @param levels Band level offsets to store, dB.
+/// @param overwrite Whether an existing preset with the same name may be replaced.
+/// @return Settings with the saved and active preset.
 Settings savePreset(const Settings &settings, const QString &name,
     const QVector<double> &levels, bool overwrite);
-// Delete the preset; the settings stay as they are, the active one resets.
+
+/// @brief Deletes the preset; the settings stay as they are, the active one resets.
+/// @param settings Current settings.
+/// @param name Preset name.
+/// @return Settings without the preset.
 Settings deletePreset(const Settings &settings, const QString &name);
-// Rename the preset; the name must not collide with another preset.
+
+/// @brief Renames the preset; the name must not collide with another preset.
+/// @param settings Current settings.
+/// @param name Current preset name.
+/// @param newName New preset name.
+/// @return Settings with the renamed preset.
 Settings renamePreset(const Settings &settings, const QString &name, const QString &newName);
-// Apply preset levels to the shared list of frequencies and select its device.
+
+/// @brief Applies preset levels to the shared list of frequencies and selects its device.
+/// @param settings Current settings.
+/// @param name Preset name.
+/// @param availableDevices Labels of the devices present on this computer.
+/// @return Applied settings and an optional missing-device warning.
 PresetApplication applyPreset(const Settings &settings, const QString &name,
     const QSet<QString> &availableDevices);
 
-// Do the current levels or device differ from the active preset?
+/// @brief Tells whether the current levels or device differ from the active preset.
+/// @param settings Current settings.
+/// @param currentLevels Levels to compare; empty means the levels stored in @p settings.
 bool isModified(const Settings &settings, const QVector<double> &currentLevels = {});
 
 } // namespace tp::presets

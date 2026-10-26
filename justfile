@@ -89,6 +89,14 @@ clean:
     rm -rf {{build_dirs}}
     echo "cleaned: {{build_dirs}}"
 
+# Generate HTML API documentation into build/doxygen/html.
+docs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{source_directory()}}"
+    doxygen Doxyfile
+    echo "docs: build/doxygen/html/index.html"
+
 # Windows release: build, then deploy the Qt runtime into build\package.
 windows package_dir="build/package":
     cmake --preset release

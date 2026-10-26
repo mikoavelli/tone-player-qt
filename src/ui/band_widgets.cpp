@@ -1,4 +1,7 @@
-// Equalizer widgets: vertical sliders, the ruler and band columns.
+/// @file band_widgets.cpp
+/// @brief Equalizer widgets: vertical sliders, the ruler and band columns.
+///
+/// Implementation of the widgets declared in band_widgets.h.
 #include "band_widgets.h"
 
 #include "theme.h"

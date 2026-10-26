@@ -1,4 +1,7 @@
-// Program entry point.
+/// @file main.cpp
+/// @brief Program entry point.
+///
+/// Creates the application, loads the settings and shows the main window.
 #include "audio_engine.h"
 #include "errors.h"
 #include "i18n.h"
@@ -23,7 +26,8 @@ namespace {
 using tp::settings_store::settingsName;
 
 
-// Directories where settings.json may be located, in order of priority.
+/// @brief Returns the directories where settings.json may be located, in order of priority.
+/// @param argv0 Program path used for the second candidate.
 std::vector<std::filesystem::path> settingsCandidates(const char *argv0)
 {
     std::vector<std::filesystem::path> candidates;
@@ -35,7 +39,8 @@ std::vector<std::filesystem::path> settingsCandidates(const char *argv0)
     return candidates;
 }
 
-// Directory with settings: the first one where it is actually located.
+/// @brief Returns the directory with settings: the first candidate that contains the file.
+/// @param argv0 Program path used for the candidate list.
 std::filesystem::path baseDir(const char *argv0)
 {
     auto candidates = settingsCandidates(argv0);
@@ -47,7 +52,7 @@ std::filesystem::path baseDir(const char *argv0)
     return candidates.front();
 }
 
-// Handler of unhandled exceptions: show the detailed text in a dialog.
+/// @brief Handler of unhandled exceptions: shows the detailed text in a dialog.
 [[maybe_unused]] void handleException()
 {
     const std::exception_ptr current = std::current_exception();
@@ -65,6 +70,10 @@ std::filesystem::path baseDir(const char *argv0)
 
 } // namespace
 
+/// @brief Runs the program: loads the settings, shows the window and enters the event loop.
+/// @param argc Number of command-line arguments.
+/// @param argv Command-line arguments.
+/// @return Process exit code.
 int main(int argc, char *argv[])
 {
     // The starting folder is the one with settings.json: the configuration

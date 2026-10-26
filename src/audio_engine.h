@@ -1,9 +1,10 @@
-// Streaming generator of control tones.
-//
-// The sound is formed without external audio libraries: the sine comes from a
-// table, the output device is opened via QAudioSink (Qt Multimedia). The push
-// mode is used: a timer on the interface thread slightly ahead of time fills
-// the buffer of the device.
+/// @file audio_engine.h
+/// @brief Streaming generator of control tones.
+///
+/// The sound is formed without external audio libraries: the sine comes from a
+/// table, the output device is opened via QAudioSink (Qt Multimedia). The push
+/// mode is used: a timer on the interface thread slightly ahead of time fills
+/// the buffer of the device.
 #pragma once
 
 #include "models.h"
@@ -17,120 +18,153 @@
 class QAudioSink;
 class QIODevice;
 
+/// @brief Audio engine: signal generation and playback on an output device.
 namespace tp::audio {
 
+/// @brief Number of channels requested from the device first.
 inline constexpr int channels = 1;
+/// @brief Stereo fallback if the device cannot open a mono stream.
 inline constexpr int fallbackChannels = 2;
 
-// Size of the sine table — a power of two; the phase transition uses a mask.
+/// @brief Size of the sine table — a power of two; the phase transition uses a mask.
 inline constexpr int tableSize = 8192;
+/// @brief Mask for reducing the phase to the table index range.
 inline constexpr int tableMask = tableSize - 1;
 
-// Descriptor of an output device.
-//
-// The index of the device in the system list changes between runs, therefore
-// the settings store the label: the human name of the device.
+/// @brief Descriptor of an output device.
+///
+/// The index of the device in the system list changes between runs, therefore
+/// the settings store the label: the human name of the device.
 struct OutputDevice {
-    int index = 0;
-    QString name;
+    int index = 0; ///< Index in the system device list.
+    QString name; ///< Human-readable device name.
 
-    // Label of the device in the interface and in the settings.
+    /// @brief Returns the label of the device in the interface and in the settings.
     [[nodiscard]] QString label() const { return name; }
 
+    /// @brief Compares the index and the name of two devices.
     [[nodiscard]] bool operator==(const OutputDevice &other) const = default;
 };
 
-// List of output devices available to the system.
+/// @brief Returns the output devices available to the system.
 QVector<OutputDevice> listOutputDevices();
-// Device with the label label; std::nullopt, if not requested or not found.
+
+/// @brief Finds a device by its label.
+/// @param devices Devices to search.
+/// @param label Label to find; empty means “not requested”.
+/// @return The matching device, or std::nullopt if the label is empty or unknown.
 std::optional<OutputDevice> findDevice(const QVector<OutputDevice> &devices,
     const std::optional<QString> &label);
 
-// Sine signal formation: frequency, band level, smooth transitions.
-//
-// The tone level in dB from full scale is the overall level plus the band
-// offset.
+/// @brief Sine signal formation: frequency, band level, smooth transitions.
+///
+/// The tone level in dB from full scale is the overall level plus the band
+/// offset.
 class ToneGenerator {
 public:
+    /// @brief Creates a generator positioned at the start of the sequence.
+    /// @param config Frequencies, tone duration, sample rate and fade.
+    /// @param levels Initial band level offsets, dB.
+    /// @param masterDb Overall level, dB from full scale.
+    /// @param autoplayEnabled Whether the next frequency may start automatically.
+    /// @param levelScale Range and step of the level offsets.
     ToneGenerator(ToneConfig config, QVector<double> levels, double masterDb,
         bool autoplayEnabled = true, LevelScale levelScale = defaultLevelScale);
 
+    /// @brief Returns the playback configuration.
     [[nodiscard]] const ToneConfig &config() const noexcept { return config_; }
 
+    /// @brief Returns the overall level, dB from full scale.
     [[nodiscard]] double masterDb() const noexcept { return masterDb_; }
 
-    // Tone duration in frames.
+    /// @brief Returns the tone duration in frames.
     [[nodiscard]] qint64 toneLengthFrames() const;
 
-    // Level offsets of all bands, dB.
+    /// @brief Returns the level offsets of all bands, dB.
     [[nodiscard]] QVector<double> levels() const;
 
-    // Range and step of the level offsets.
+    /// @brief Returns the range and step of the level offsets.
     [[nodiscard]] LevelScale levelScale() const noexcept { return levelScale_; }
 
-    // Band level offset by index, dB.
+    /// @brief Returns the band level offset by index, dB.
+    /// @param index Band index.
     [[nodiscard]] double levelAt(int index) const;
 
-    // Change the band level offset, dB; the sounding tone changes immediately.
+    /// @brief Changes the band level offset; the sounding tone changes immediately.
+    /// @param index Band index.
+    /// @param levelDb New level offset, dB.
     void setLevelAt(int index, double levelDb);
 
-    // Final level of the current tone: overall level plus band offset, dB.
+    /// @brief Returns the final level of the current tone: overall level plus band offset, dB.
     [[nodiscard]] double currentGainDb() const;
 
-    // Amplitude of the current tone, 0.0..1.0.
+    /// @brief Returns the amplitude of the current tone, 0.0..1.0.
     [[nodiscard]] double amplitude() const;
 
-    // Can the next frequency start automatically.
+    /// @brief Tells whether the next frequency may start automatically.
     [[nodiscard]] bool advanceAllowed() const noexcept { return autoplayEnabled_; }
 
-    // Allow (or forbid) auto-play of the next frequency.
+    /// @brief Allows or forbids auto-play of the next frequency.
+    /// @param enabled New autoplay state.
     void setAutoplay(bool enabled) noexcept { autoplayEnabled_ = enabled; }
 
-    // Duration of ramp up and ramp down in frames.
+    /// @brief Returns the duration of ramp up and ramp down in frames.
     [[nodiscard]] qint64 fadeFrames() const;
 
-    // Change the overall level, dB from full scale.
+    /// @brief Changes the overall level, dB from full scale.
+    /// @param masterDb New overall level.
     void setMasterDb(double masterDb);
 
-    // Return to the start of the sequence.
+    /// @brief Returns to the start of the sequence.
     void reset();
 
-    // Move to a tone by index without playing it.
+    /// @brief Moves to a tone by index without playing it.
+    /// @param index Target tone index.
     void seek(int index);
 
-    // Form frames of the signal and move the playback position.
+    /// @brief Forms frames of the signal and moves the playback position.
+    /// @param frames Number of frames to render.
+    /// @return Mono samples in the range −1.0..1.0.
     QVector<float> render(qint64 frames);
 
-    int index = 0;
-    qint64 framesInTone = 0;
-    bool finished = false;
+    int index = 0; ///< Index of the current tone.
+    qint64 framesInTone = 0; ///< Frames already rendered in the current tone.
+    bool finished = false; ///< Whether the last tone has been played completely.
 
 private:
+    /// @brief Renders a part of the current tone into a block.
     void renderTone(QVector<float> &block, qint64 start, qint64 count);
+    /// @brief Moves to the next tone or finishes the sequence.
     void advance() noexcept;
 
-    ToneConfig config_;
-    bool autoplayEnabled_ = true;
-    double masterDb_ = 0.0;
-    LevelScale levelScale_;
-    // Levels are edited from the interface during sounding, therefore they
-    // live here, not in an immutable ToneConfig.
+    ToneConfig config_; ///< Playback configuration.
+    bool autoplayEnabled_ = true; ///< Whether the sequence advances by itself.
+    double masterDb_ = 0.0; ///< Overall level, dB from full scale.
+    LevelScale levelScale_; ///< Range and step of the level offsets.
+    /// Levels are edited from the interface during sounding, therefore they
+    /// live here, not in an immutable ToneConfig.
     QVector<double> levels_;
-    double phase_ = 0.0;
+    double phase_ = 0.0; ///< Current phase in table indices.
 
-    std::array<float, tableSize> sineTable_;
+    std::array<float, tableSize> sineTable_; ///< Precomputed sine values.
 };
 
-// Playback of a tone sequence with the given frequencies.
-//
-// The playback position is counted by the number of frames issued, therefore
-// pause does not shift the timer and does not depend on the accuracy of the
-// system clock. The device buffer is filled on the interface thread by a
-// timer, with a small jump ahead so that GUI pauses do not lead to a dropout.
+/// @brief Playback of a tone sequence with the given frequencies.
+///
+/// The playback position is counted by the number of frames issued, therefore
+/// pause does not shift the timer and does not depend on the accuracy of the
+/// system clock. The device buffer is filled on the interface thread by a
+/// timer, with a small jump ahead so that GUI pauses do not lead to a dropout.
 class TonePlayer {
 public:
+    /// @brief Creates a player without opening the audio device.
+    /// @param config Frequencies, tone duration, sample rate and fade.
+    /// @param levels Initial band level offsets, dB.
+    /// @param masterDb Overall level, dB from full scale.
+    /// @param levelScale Range and step of the level offsets.
     TonePlayer(const ToneConfig &config, const QVector<double> &levels, double masterDb,
         LevelScale levelScale = defaultLevelScale);
+    /// @brief Stops playback and releases the device.
     ~TonePlayer();
 
     TonePlayer(const TonePlayer &) = delete;
@@ -138,69 +172,79 @@ public:
     TonePlayer(TonePlayer &&) = delete;
     TonePlayer &operator=(TonePlayer &&) = delete;
 
+    /// @brief Returns the playback configuration.
     [[nodiscard]] const ToneConfig &config() const noexcept { return config_; }
+    /// @brief Returns the tone generator.
     [[nodiscard]] const ToneGenerator &generator() const noexcept { return *generator_; }
+    /// @brief Returns the current player state.
     [[nodiscard]] PlayerState state() const noexcept { return state_; }
+    /// @brief Returns the overall level, dB from full scale.
     [[nodiscard]] double masterDb() const;
-    // Index of the selected tone: current during playback, else chosen manually.
+    /// @brief Returns the index of the selected tone: current during playback, else chosen manually.
     [[nodiscard]] int toneIndex() const;
-    // Frequency of the selected tone, Hz.
+    /// @brief Returns the frequency of the selected tone, Hz.
     [[nodiscard]] double currentFrequency() const;
-    // Final level of the selected tone, dB.
+    /// @brief Returns the final level of the selected tone, dB.
     [[nodiscard]] double currentGainDb() const;
-    // Level offsets of all bands, dB.
+    /// @brief Returns the level offsets of all bands, dB.
     [[nodiscard]] QVector<double> levels() const;
+    /// @brief Returns the band level offset by index, dB.
     [[nodiscard]] double levelAt(int index) const;
-    // Change the band level offset; the sounding tone changes immediately.
+    /// @brief Changes the band level offset; the sounding tone changes immediately.
     void setLevelAt(int index, double levelDb);
-    // Change the overall level, dB from full scale.
+    /// @brief Changes the overall level, dB from full scale.
     void setMasterDb(double masterDb);
-    // Replace frequencies, durations and levels; only when there is no sound.
+    /// @brief Replaces frequencies, durations and levels; only when there is no sound.
     void reconfigure(const ToneConfig &config, const QVector<double> &levels,
         LevelScale levelScale);
-    // Select the output device for the next start (by label).
+    /// @brief Selects the output device for the next start by its label.
+    /// @param deviceLabel Device name; empty selects the default device.
     void setDevice(const std::optional<QString> &deviceLabel);
-    // Label of the selected output device.
+    /// @brief Returns the label of the selected output device.
     [[nodiscard]] std::optional<QString> deviceLabel() const noexcept { return deviceLabel_; }
-    // Allow (or forbid) auto-play of the next frequency.
+    /// @brief Allows or forbids auto-play of the next frequency.
     void setAutoplay(bool enabled);
-    // Last stream message, if there was one.
+    /// @brief Returns the last stream message, if there was one.
     [[nodiscard]] const QString &lastStatus() const noexcept { return lastStatus_; }
 
-    // Start or re-tune playback from the tone index.
+    /// @brief Starts or re-tunes playback from the tone index.
+    /// @param index Tone to start from.
     void start(int index = 0);
-    // Move to a tone by index without playback.
+    /// @brief Moves to a tone by index without playback.
     void select(int index);
-    // Suspend playback.
+    /// @brief Suspends playback, keeping the position.
     void pause() noexcept;
-    // Resume playback after a pause.
+    /// @brief Resumes playback after a pause.
     void resume() noexcept;
-    // Stop playback.
+    /// @brief Stops playback and returns to the start.
     void stop() noexcept;
-    // Free the output device, keeping the final session state.
+    /// @brief Frees the output device, keeping the final session state.
     void finish() noexcept;
 
-    // Current playback position.
+    /// @brief Returns the current playback position.
     [[nodiscard]] PlaybackProgress progress() const;
 
 private:
+    /// @brief Opens the audio device and starts the feed timer.
     void openStream();
+    /// @brief Stops the feed timer and closes the audio device.
     void closeStream() noexcept;
+    /// @brief Pushes the next portion of samples into the device buffer.
     void fillFromTimer();
 
-    ToneConfig config_;
-    std::unique_ptr<ToneGenerator> generator_;
-    PlayerState state_ = PlayerState::Idle;
-    std::optional<QString> deviceLabel_;
+    ToneConfig config_; ///< Playback configuration.
+    std::unique_ptr<ToneGenerator> generator_; ///< Signal source.
+    PlayerState state_ = PlayerState::Idle; ///< Current player state.
+    std::optional<QString> deviceLabel_; ///< Selected output device label.
 
-    std::unique_ptr<QAudioSink> sink_;
-    QIODevice *sinkPort_ = nullptr;
-    int sinkChannels_ = channels;
-    QTimer feedTimer_;
-    int feedFrames_ = 0;
+    std::unique_ptr<QAudioSink> sink_; ///< Open audio sink, if any.
+    QIODevice *sinkPort_ = nullptr; ///< Writable end of the sink.
+    int sinkChannels_ = channels; ///< Channels used by the open stream.
+    QTimer feedTimer_; ///< Timer that fills the device buffer.
+    int feedFrames_ = 0; ///< Frames pushed per timer tick.
 
-    QString lastStatus_;
-    QList<QAudioDevice> devices_;
+    QString lastStatus_; ///< Last error or informational message.
+    QList<QAudioDevice> devices_; ///< Output devices present at open time.
 };
 
 } // namespace tp::audio

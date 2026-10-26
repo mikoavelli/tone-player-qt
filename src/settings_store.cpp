@@ -1,4 +1,7 @@
-// Reading, validation and writing of the settings.json file.
+/// @file settings_store.cpp
+/// @brief Reading, validation and writing of the settings.json file.
+///
+/// Implementation of the settings persistence declared in settings_store.h.
 #include "settings_store.h"
 
 #include "errors.h"
@@ -40,26 +43,44 @@ namespace {
 using tr_ns::tr;
 using Qt::Literals::StringLiterals::operator""_s;
 
+/// @brief Keys allowed in the root object of settings.json.
 const QStringList rootKeys = {u"active_preset"_s, u"bands"_s, u"levels"_s,
     u"output"_s, u"playback"_s, u"presets"_s, u"schema_version"_s};
+/// @brief Keys allowed in the “playback” object.
 const QStringList playbackKeys = {u"autoplay"_s, u"fade_ms"_s, u"sample_rate"_s,
     u"seconds_per_tone"_s};
+/// @brief Keys allowed in the “output” object.
 const QStringList outputKeys = {u"device"_s, u"master_gain_db"_s};
+/// @brief Keys allowed in the “levels” object.
 const QStringList levelKeys = {u"max_db"_s, u"min_db"_s, u"step_db"_s};
+/// @brief Keys allowed in one band object.
 const QStringList bandKeys = {u"frequency_hz"_s, u"level_db"_s};
+/// @brief Keys allowed in one preset object.
 const QStringList presetKeys = {u"device"_s, u"levels"_s, u"name"_s};
 
 std::optional<QString> asDevice(const QJsonValue &value, const QString &what);
 std::optional<QString> asActivePreset(const QJsonValue &value, const QString &what);
 QString deviceData(const std::optional<QString> &device);
 QString activePresetData(const std::optional<QString> &activePreset);
+/// @brief Parses and type-checks the band array.
+/// @param value Value to parse.
+/// @param what Path of the value for error messages.
+/// @return Bands in file order; range validation happens later.
 QVector<Band> parseBands(const QJsonValue &value, const QString &what);
+/// @brief Parses and type-checks an array of level offsets.
+/// @param value Value to parse.
+/// @param what Path of the value for error messages.
+/// @return Levels in file order; range validation happens later.
 QVector<double> parseLevels(const QJsonValue &value, const QString &what);
 
 // -----------------------------------------------------------------------------
 // Value validation
 // -----------------------------------------------------------------------------
 
+/// @brief Validates one level offset against the slider scale.
+/// @param levelDb Level to check, dB.
+/// @param scale Allowed range and step.
+/// @param what Path of the value for error messages.
 void validateLevel(double levelDb, const LevelScale &scale, const QString &what)
 {
     if (!std::isfinite(levelDb) || levelDb < scale.minDb || levelDb > scale.maxDb) {
@@ -72,6 +93,9 @@ void validateLevel(double levelDb, const LevelScale &scale, const QString &what)
     }
 }
 
+/// @brief Validates the output device name.
+/// @param device Device label; empty means the default device.
+/// @param what Path of the value for error messages.
 void validateDevice(const std::optional<QString> &device, const QString &what)
 {
     if (device.has_value() && device->trimmed().isEmpty()) {
@@ -228,6 +252,10 @@ void validateSettings(const Settings &settings)
 
 namespace {
 
+/// @brief Requires a json object.
+/// @param value Value to check.
+/// @param what Path of the value for error messages.
+/// @throws SettingsFormatError If the value is not an object.
 QJsonObject asObject(const QJsonValue &value, const QString &what)
 {
     if (!value.isObject()) {
@@ -236,6 +264,11 @@ QJsonObject asObject(const QJsonValue &value, const QString &what)
     return value.toObject();
 }
 
+/// @brief Requires exactly the given keys, no more and no less.
+/// @param data Object to check.
+/// @param keys Expected keys.
+/// @param what Path of the object for error messages.
+/// @throws SettingsFormatError If keys are missing or unknown.
 void exactKeys(const QJsonObject &data, const QStringList &keys, const QString &what)
 {
     QStringList missing;
@@ -260,6 +293,10 @@ void exactKeys(const QJsonObject &data, const QStringList &keys, const QString &
     }
 }
 
+/// @brief Requires a finite json number.
+/// @param value Value to check.
+/// @param what Path of the value for error messages.
+/// @throws SettingsFormatError If the value has the wrong type.
 double asNumber(const QJsonValue &value, const QString &what)
 {
     if (!value.isDouble()) {
@@ -272,6 +309,10 @@ double asNumber(const QJsonValue &value, const QString &what)
     return number;
 }
 
+/// @brief Requires an integer json number that fits into int.
+/// @param value Value to check.
+/// @param what Path of the value for error messages.
+/// @throws SettingsFormatError If the value has the wrong type.
 int asInt(const QJsonValue &value, const QString &what)
 {
     if (!value.isDouble()) {
@@ -284,6 +325,10 @@ int asInt(const QJsonValue &value, const QString &what)
     return static_cast<int>(number);
 }
 
+/// @brief Requires a json boolean.
+/// @param value Value to check.
+/// @param what Path of the value for error messages.
+/// @throws SettingsFormatError If the value has the wrong type.
 bool asBool(const QJsonValue &value, const QString &what)
 {
     if (!value.isBool()) {
@@ -292,6 +337,10 @@ bool asBool(const QJsonValue &value, const QString &what)
     return value.toBool();
 }
 
+/// @brief Requires a json string.
+/// @param value Value to check.
+/// @param what Path of the value for error messages.
+/// @throws SettingsFormatError If the value has the wrong type.
 QString asText(const QJsonValue &value, const QString &what)
 {
     if (!value.isString()) {
@@ -300,7 +349,10 @@ QString asText(const QJsonValue &value, const QString &what)
     return value.toString();
 }
 
-// Device: device name string or default for the system default device.
+/// @brief Parses a device name: a string or the token of the system default device.
+/// @param value Value to parse.
+/// @param what Path of the value for error messages.
+/// @return Device label, or std::nullopt for the default device.
 std::optional<QString> asDevice(const QJsonValue &value, const QString &what)
 {
     if (value.isString() && value.toString() == defaultDeviceToken) {
@@ -313,7 +365,10 @@ std::optional<QString> asDevice(const QJsonValue &value, const QString &what)
     return value.toString();
 }
 
-// Active preset: preset name or default for a missing one.
+/// @brief Parses the active preset: a name or the token meaning “no preset”.
+/// @param value Value to parse.
+/// @param what Path of the value for error messages.
+/// @return Preset name, or std::nullopt if there is no active preset.
 std::optional<QString> asActivePreset(const QJsonValue &value, const QString &what)
 {
     if (value.isString() && value.toString() == defaultDeviceToken) {
@@ -326,13 +381,15 @@ std::optional<QString> asActivePreset(const QJsonValue &value, const QString &wh
     return value.toString();
 }
 
-// Representation of the missing active preset in the file data.
+/// @brief Returns the file representation of the active preset.
+/// @param activePreset Preset name, or std::nullopt for “no preset”.
 QString activePresetData(const std::optional<QString> &activePreset)
 {
     return activePreset.value_or(QString::fromLatin1(defaultDeviceToken.data()));
 }
 
-// Representation of the default device in the file data.
+/// @brief Returns the file representation of the output device.
+/// @param device Device label, or std::nullopt for the default device.
 QString deviceData(const std::optional<QString> &device)
 {
     return device.value_or(QString::fromLatin1(defaultDeviceToken.data()));
@@ -479,7 +536,8 @@ QString scalarText(double value)
 
 namespace {
 
-// json text of a scalar.
+/// @brief Returns a json string literal: quotes and escapes the text.
+/// @param text Raw text.
 QString scalarText(const QString &text)
 {
     QString escaped = text;
@@ -488,7 +546,13 @@ QString scalarText(const QString &text)
     return u'"' + escaped + u'"';
 }
 
-// json with indentation; simple objects inside lists (bands) go on one line.
+/// @brief Formats a json value with two-space indentation.
+///
+/// Simple objects inside lists (bands and presets) are written on one line,
+/// matching the layout of the original program.
+/// @param value Value to format.
+/// @param indent Current indentation, spaces.
+/// @param inlineObjects Whether a flat object may stay on one line.
 QString formatValue(const QJsonValue &value, int indent, bool inlineObjects)
 {
     if (value.isObject()) {

@@ -1,4 +1,7 @@
-// Загрузка строк интерфейса из ресурса, собранного в бинарник.
+/// @file i18n.cpp
+/// @brief Loading of interface strings from the resource compiled into the binary.
+///
+/// Implementation of the lookup declared in i18n.h.
 #include "i18n.h"
 
 #include <QCoreApplication>
@@ -20,6 +23,7 @@ namespace tr_ns {
 
 namespace {
 
+/// @brief Returns the translation table, loading the json resource on first use.
 QHash<QString, QString> &table()
 {
     static QHash<QString, QString> cached = [] {

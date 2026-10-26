@@ -1,4 +1,7 @@
-// Settings dialog: sliders, tone and frequencies of the bands.
+/// @file settings_dialog.cpp
+/// @brief Settings dialog: sliders, tone and frequencies of the bands.
+///
+/// Implementation of the dialog declared in settings_dialog.h.
 #include "settings_dialog.h"
 
 #include "errors.h"
@@ -28,7 +31,8 @@ using Qt::Literals::StringLiterals::operator""_s;
 
 namespace {
 
-// Section title.
+/// @brief Creates a section title label.
+/// @param text Title text.
 QLabel *sectionLabel(const QString &text)
 {
     auto *label = new QLabel(text);
@@ -36,6 +40,7 @@ QLabel *sectionLabel(const QString &text)
     return label;
 }
 
+/// @brief Creates a form layout with the settings-dialog spacing and alignment.
 QFormLayout *makeForm()
 {
     auto *form = new QFormLayout();
@@ -47,6 +52,10 @@ QFormLayout *makeForm()
     return form;
 }
 
+/// @brief Adds a labeled row with a fixed-width label to a form.
+/// @param form Form to add the row to.
+/// @param text Label text.
+/// @param field Field widget on the right.
 void addRow(QFormLayout &form, const QString &text, QWidget &field)
 {
     auto *label = new QLabel(text);
@@ -56,6 +65,13 @@ void addRow(QFormLayout &form, const QString &text, QWidget &field)
     form.addRow(label, &field);
 }
 
+/// @brief Creates a configured double spin box.
+/// @param value Initial value.
+/// @param minimum Lowest allowed value.
+/// @param maximum Highest allowed value.
+/// @param suffix Unit suffix shown after the number.
+/// @param decimals Number of decimal places.
+/// @param step Single step of the spin box.
 QDoubleSpinBox *doubleBox(double value, double minimum, double maximum, const QString &suffix,
     int decimals = 1, double step = 0.5)
 {
@@ -68,6 +84,9 @@ QDoubleSpinBox *doubleBox(double value, double minimum, double maximum, const QS
     return box;
 }
 
+/// @brief Creates a reset button.
+/// @param text Button text.
+/// @param tooltip Tooltip of the button.
 QPushButton *resetButton(const QString &text, const QString &tooltip)
 {
     auto *button = new QPushButton(text);

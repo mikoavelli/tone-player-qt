@@ -1,4 +1,7 @@
-// Main window: equalizer, transport and settings.
+/// @file main_window.cpp
+/// @brief Main window: equalizer, transport and settings.
+///
+/// Implementation of the window declared in main_window.h.
 #include "main_window.h"
 
 #include "audio_engine.h"
@@ -62,6 +65,7 @@ using Qt::Literals::StringLiterals::operator""_s;
 
 namespace {
 
+/// @brief Builds the interface stylesheet with the theme colors substituted.
 QString stylesheet()
 {
     return QStringLiteral(R"(
@@ -317,6 +321,8 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
         .replace(u"%icon_disabled%"_s, theme::iconDisabledColor);
 }
 
+/// @brief Returns the translated label of the main button for a mode.
+/// @param mode Current button mode.
 QString playButtonLabel(PlayButtonMode mode)
 {
     switch (mode) {
@@ -330,6 +336,8 @@ QString playButtonLabel(PlayButtonMode mode)
     return tr_ns::tr("play.start");
 }
 
+/// @brief Returns the icon name of the main button for a mode.
+/// @param mode Current button mode.
 QString playButtonIcon(PlayButtonMode mode)
 {
     switch (mode) {
@@ -342,12 +350,16 @@ QString playButtonIcon(PlayButtonMode mode)
     return u"start"_s;
 }
 
+/// @brief Returns the translated autoplay state text.
+/// @param enabled Autoplay state.
 QString autoplayText(bool enabled)
 {
     return tr_ns::tr(enabled ? "header.autoplay.on" : "header.autoplay.off");
 }
 
-// First installed font, otherwise fallback.
+/// @brief Returns the first installed font family, otherwise the fallback.
+/// @param candidates Preferred families in order.
+/// @param fallback Family used when none of the candidates is installed.
 QString firstFamily(const std::array<std::string_view, 5> &candidates, const QString &fallback)
 {
     QSet<QString> available;
@@ -365,8 +377,14 @@ QString firstFamily(const std::array<std::string_view, 5> &candidates, const QSt
 
 // ---- Icons -------------------------------------------------------------------
 
+/// @brief Pixels per logical point of the pre-rendered glyph pixmaps.
 constexpr int iconRatio = 2;
 
+/// @brief Draws a themed vector glyph into a pixmap.
+/// @param kind Glyph name: settings, presetSave, delete, start, pause or stop.
+/// @param size Logical size of the pixmap, px.
+/// @param color Stroke and fill color.
+/// @return Pixmap with the glyph, scaled for high-DPI screens.
 QPixmap drawGlyph(const QString &kind, int size, const QColor &color)
 {
     // Icon kind in a square size × size (24 × 24 grid).
@@ -437,6 +455,11 @@ QPixmap drawGlyph(const QString &kind, int size, const QColor &color)
     return pixmap;
 }
 
+/// @brief Creates an icon with normal and disabled pixmaps.
+/// @param kind Glyph name.
+/// @param size Logical icon size, px.
+/// @param normal Color in the normal state.
+/// @param disabled Color in the disabled state.
 QIcon makeIcon(const QString &kind, int size, const QString &normal, const QString &disabled)
 {
     QIcon icon;
@@ -445,6 +468,7 @@ QIcon makeIcon(const QString &kind, int size, const QString &normal, const QStri
     return icon;
 }
 
+/// @brief Builds the complete icon set used by the window.
 QHash<QString, QIcon> makeIcons()
 {
     using namespace theme;
@@ -466,12 +490,13 @@ QHash<QString, QIcon> makeIcons()
     return icons;
 }
 
-// Custom combo with a chevron drawn in the theme color.
+/// @brief Combo box with a chevron drawn in the theme color.
 class ChevronCombo final : public QComboBox {
 public:
     using QComboBox::QComboBox;
 
 protected:
+    /// @brief Draws the chevron on top of the style-drawn combo box.
     void paintEvent(QPaintEvent *event) override
     {
         QComboBox::paintEvent(event);
@@ -491,9 +516,11 @@ protected:
     }
 };
 
-// Wheel scroll of the band strip moves it horizontally.
+/// @brief Scroll area of the band strip: the wheel moves it horizontally.
 class BandScrollArea final : public QScrollArea {
 public:
+    /// @brief Creates the scroll area without frames or scrollbars.
+    /// @param parent Parent widget.
     explicit BandScrollArea(QWidget *parent = nullptr)
         : QScrollArea(parent)
     {
@@ -505,6 +532,7 @@ public:
     }
 
 protected:
+    /// @brief Translates a vertical wheel gesture into horizontal scrolling.
     void wheelEvent(QWheelEvent *event) override
     {
         if (auto *bar = horizontalScrollBar()) {

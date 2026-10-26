@@ -1,3 +1,7 @@
+/// @file text_format.cpp
+/// @brief Formatting numbers for the interface.
+///
+/// Implementation of the formatting helpers declared in text_format.h.
 #include "exact_eq.h"
 #include "text_format.h"
 
@@ -17,10 +21,13 @@ using tr_ns::tr;
 
 namespace {
 
+/// @brief Unicode minus sign used instead of the hyphen.
 constexpr char16_t minusSign = u'\u2212';
+/// @brief Size of the stack buffer used to format numbers.
 constexpr qsizetype numberBuffer = 64;
 
-// Thousand-group separators → spaces like in the original: "10 000".
+/// @brief Inserts spaces between thousands, like in the original: "10 000".
+/// @param value Integer to format.
 QString grouped(qint64 value)
 {
     QString digits = QString::number(value);
@@ -34,8 +41,10 @@ QString grouped(qint64 value)
     return digits;
 }
 
-// Short representation of a double in the style of python repr: "0.5", "-10",
-// "1e-05". Needed for the text of settings.json.
+/// @brief Returns a short representation in the style of python repr: "0.5", "-10", "1e-05".
+///
+/// Needed for the text of settings.json.
+/// @param value Number to format.
 QString makeShortFloat(double value)
 {
     char buffer[numberBuffer];
@@ -50,7 +59,8 @@ QString makeShortFloat(double value)
     return text;
 }
 
-// General format %g in the shortest representation: "7.5", "10".
+/// @brief Returns %g-like text in the shortest representation: "7.5", "10".
+/// @param value Number to format.
 QString makeShortGeneral(double value)
 {
     char buffer[numberBuffer];
