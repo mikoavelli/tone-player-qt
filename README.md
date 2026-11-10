@@ -128,14 +128,14 @@ Headless smoke run: `QT_QPA_PLATFORM=offscreen ./tone-player-qt`.
 ## Language
 
 The interface language is chosen at **compile time** (all translations are
-embedded into the binary):
+embedded into the binary). `resources/i18n/en.json` and
+`resources/i18n/ru.json` are both present and carry the same set of keys:
 
 ```sh
-cmake -S . -B build -DTONE_PLAYER_LANGUAGE=ru   # requires resources/i18n/ru.json
+cmake -S . -B build -DTONE_PLAYER_LANGUAGE=ru
+cmake --build build
+# or: just lang ru
 ```
-
-Currently only `en.json` is present; a Russian build just needs a
-`resources/i18n/ru.json` with the same keys.
 
 ## Runtime notes
 
