@@ -21,23 +21,21 @@ endif()
 # into the binary. A release in another language is produced by changing this
 # option; the layout of the deliverables does not change: binary + settings.json.
 set(TONE_PLAYER_LANGUAGE "en" CACHE STRING "Interface language compiled into the binary")
-find_file(TONE_PLAYER_I18N_FILE
-    NAMES ${TONE_PLAYER_LANGUAGE}.json
-    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/resources/i18n
-    NO_CACHE_VARIABLE
-    NO_DEFAULT_PATH
-)
-if(NOT TONE_PLAYER_I18N_FILE)
+set(TONE_PLAYER_I18N_FILE
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/i18n/${TONE_PLAYER_LANGUAGE}.json)
+if(NOT EXISTS ${TONE_PLAYER_I18N_FILE})
     message(FATAL_ERROR "Translation resources/i18n/${TONE_PLAYER_LANGUAGE}.json not found")
 endif()
 
-find_package(Qt6 6.12 REQUIRED COMPONENTS Widgets Multimedia)
+find_package(Qt6 6.12 REQUIRED COMPONENTS Widgets Multimedia Network)
 qt_standard_project_setup(REQUIRES 6.12)
 
 set(TONE_PLAYER_SOURCES
     src/main.cpp
     src/i18n.h
     src/i18n.cpp
+    src/ipc.h
+    src/ipc.cpp
     src/errors.h
     src/models.h
     src/settings_store.h
@@ -74,7 +72,29 @@ qt_add_resources(tone-player-qt toneplayer-i18n
     FILES ${TONE_PLAYER_I18N_FILE}
 )
 
-target_link_libraries(tone-player-qt PRIVATE Qt6::Widgets Qt6::Multimedia)
+target_link_libraries(tone-player-qt PRIVATE Qt6::Widgets Qt6::Multimedia Qt6::Network)
+
+# Static MinGW dependencies of the system freetype that Qt's wrap does not know.
+if(WIN32)
+    target_link_libraries(tone-player-qt PRIVATE graphite2 bz2)
+endif()
+
+# Windows deliverable is named TonePlayer.exe (see the release bundle).
+if(WIN32)
+    set_target_properties(tone-player-qt PROPERTIES
+        OUTPUT_NAME TonePlayer
+    )
+    # Static Qt needs its platform and multimedia plugins imported explicitly:
+    # the Qt6::QWindowsIntegrationPlugin and Qt6::QWindowsMediaPlugin packages
+    # ship the plugin libraries plus the init objects that register them.
+    find_package(Qt6QWindowsIntegrationPlugin QUIET)
+    find_package(Qt6QWindowsMediaPlugin QUIET)
+    if(Qt6::QWindowsIntegrationPlugin)
+        qt_import_plugins(tone-player-qt
+            INCLUDE Qt6::QWindowsIntegrationPlugin Qt6::QWindowsMediaPlugin
+        )
+    endif()
+endif()
 
 set_target_properties(tone-player-qt PROPERTIES
     WIN32_EXECUTABLE TRUE

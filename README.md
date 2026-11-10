@@ -8,6 +8,12 @@ The application generates a sequence of sine tones using the levels of an
 11-band equalizer, plays them through an output device of your choice, and
 persists all settings in `settings.json` next to the executable.
 
+A minimal named-pipe IPC server (`\\.\pipe\tone-player`, same wire format as the
+Python original) accepts one-line calls and answers one line of JSON
+`{"ok": ..., "message": "..."}`: `status`, `play [index]`, `stop`, `toggle`
+(`toggle` = playing/paused → stop, otherwise start from the focused band — this is
+what the CKM2PO TONE button uses). Remote calls never raise dialogs.
+
 All user-facing strings are compiled into the binary from a Qt resource
 (`resources/i18n/en.json`), so the program only ships as
 **one executable + `settings.json`** — no external .qm files or data folders.
@@ -44,8 +50,38 @@ just smoke        # headless 5-second run of the release build
 just settings     # copy settings.json into every build directory
 just lang ru      # release build with another compiled-in language
 just windows      # Windows: build + windeployqt into build/package
+just windows-static  # Windows cross build (self-contained exe) → build-win/
+just dist         # assemble dist/ release: CKM2PO.exe (patched) + TonePlayer.exe + settings.json + UsbDrv.dll
 just clean        # remove all preset build directories
 ```
+
+### Windows release bundle
+
+The deliverable is a **4-file set** in `dist/`:
+
+| File | What it is |
+|------|------------|
+| `CKM2PO.exe` | Patched СКМ2ПО (variant A: device-match relax, 4 NOP'd JNZ guards in `FUN_00589240`; no serial/description gating). Deployed and verified on the Win10 test VM; the empty-editor build host is `~/Projects/CKM2PO/analysis/patched/CKM2PO-variantA.exe`, sha256 `fca2b18b70536ab27032aaa1762e2b5e875626173402419f550cf238e1653aab`. |
+| `UsbDrv.dll` | The СКМ2ПО FTDI proxy (source `analysis/tonebutton/tonebtn.c`): forwards the 8 genuine FT_* exports to the `UsbDrv_orig.dll` you rename the stock one to, and paints the APP (open TonePlayer) and TONE (play/stop) buttons on the toolbar. |
+| `TonePlayer.exe` | The Qt port itself — self-contained: Qt and all dependencies are statically linked, no Qt DLLs needed. |
+| `settings.json` | Tones 1..20 (500 Hz..10000 Hz, 10 s each). |
+
+Installation on a Windows host (installs into the СКМ2ПО directory, e.g.
+`C:\CKM2PO\`):
+
+1. Stop СКМ2ПО; rename the stock `UsbDrv.dll` → `UsbDrv_orig.dll`.
+2. Copy the four files from `dist/` next to `CKM2PO.exe` (they replace it).
+3. Start СКМ2ПО; check the APP and TONE buttons top-right, and `tonebtn.log`
+   next to `UsbDrv.dll` for `ini absent -> default TonePlayerExe=` — the proxy takes
+   the exe location next to itself, no `.ini` required.
+
+`just windows-static` cross-compiles the bundle with MinGW-w64 against the static
+Qt 6.12 packages from Ark's `ownstuff` repository
+(`ownstuff/mingw-w64-qt6-base-static`, `ownstuff/mingw-w64-qt6-multimedia-static`);
+`cmake/mingw-static.cmake` plus `cmake/pkg-config-static.sh` and
+`cmake/compat/unofficial-brotli/` force the static archives of every third-party
+dependency so no MinGW runtime DLL is imported. See `just/dist` for the full
+bundle assembly.
 
 CMake can also be driven directly with the same presets:
 `cmake --preset release && cmake --build --preset release`.

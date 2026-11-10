@@ -1,6 +1,7 @@
 build/
 build-dev/
 build-san/
+build-win/
 /dist/
 /CMakeUserPresets.json
 *.tmp

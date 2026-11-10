@@ -16,6 +16,9 @@
 #include "theme.h"
 #include "text_format.h"
 
+#include <algorithm>
+#include <stdexcept>
+
 #include <QApplication>
 #include <QCloseEvent>
 #include <QColor>
@@ -1613,6 +1616,103 @@ void MainWindow::refresh()
     }
     statusLabel_->setText(status);
     statusLabel_->setVisible(!status.isEmpty());
+}
+
+/// @brief One-line description of the player for remote clients.
+/// Same shape as the Python version: `state=playing tone=1/20 frequency=500Hz
+/// remaining=200.0s autoplay=on master=+0.0dB`.
+QString MainWindow::handleRemoteCall(const QString &name, const QStringList &args)
+{
+    const auto summary = [this]() {
+        const auto progress = player_->progress();
+        const char *stateName = "idle";
+        switch (player_->state()) {
+        case PlayerState::Playing:
+            stateName = "playing";
+            break;
+        case PlayerState::Paused:
+            stateName = "paused";
+            break;
+        case PlayerState::Finished:
+            stateName = "finished";
+            break;
+        default:
+            break;
+        }
+        return QStringLiteral(
+            "state=%1 tone=%2/%3 frequency=%4Hz remaining=%5s autoplay=%6 master=%7dB")
+            .arg(QString::fromLatin1(stateName))
+            .arg(progress.toneIndex + 1)
+            .arg(settings_.bands.size())
+            .arg(QString::number(player_->currentFrequency(), 'g', 6))
+            .arg(progress.totalRemaining, 0, 'f', 1)
+            .arg(settings_.autoplay ? QStringLiteral("on") : QStringLiteral("off"))
+            .arg(QString::asprintf("%+.1f", settings_.masterGainDb));
+    };
+    const auto indexArg = [this, &args]() -> int {
+        if (args.isEmpty()) {
+            throw std::runtime_error("missing band index");
+        }
+        bool ok = false;
+        const int raw = args.first().toInt(&ok);
+        if (!ok) {
+            throw std::runtime_error(
+                ("not an integer: " + args.first()).toStdString());
+        }
+        return std::clamp(raw, 0, static_cast<int>(settings_.bands.size()) - 1);
+    };
+    const auto startOrThrow = [this](const int index) {
+        try {
+            player_->start(index);
+        } catch (const AudioError &error) {
+            throw std::runtime_error(error.message().toStdString());
+        }
+        finishingHandled_ = false;
+        refresh();
+    };
+    const auto stopOrThrow = [this]() {
+        player_->stop();
+        finishingHandled_ = false;
+        refresh();
+    };
+
+    const QString call = name.toLower();
+    if (call == QStringLiteral("status")) {
+        return summary();
+    }
+    if (call == QStringLiteral("stop")) {
+        stopOrThrow();
+        return summary();
+    }
+    if (call == QStringLiteral("toggle")) {
+        const PlayerState state = player_->state();
+        if (state == PlayerState::Playing || state == PlayerState::Paused) {
+            stopOrThrow();
+            return summary();
+        }
+        startOrThrow(state == PlayerState::Finished ? 0 : focusedBandIndex());
+        return summary();
+    }
+    if (call == QStringLiteral("play")) {
+        if (!args.isEmpty()) {
+            startOrThrow(indexArg());
+            return summary();
+        }
+        const PlayerState state = player_->state();
+        if (state == PlayerState::Playing) {
+            player_->pause();
+            refresh();
+            return summary();
+        }
+        if (state == PlayerState::Paused) {
+            startOrThrow(player_->toneIndex());
+            return summary();
+        }
+        startOrThrow(state == PlayerState::Finished ? 0 : focusedBandIndex());
+        return summary();
+    }
+    throw std::runtime_error(
+        ("unknown call " + name + " (status|play|stop|toggle)").toStdString());
 }
 
 } // namespace tp::ui

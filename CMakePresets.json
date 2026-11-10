@@ -31,6 +31,19 @@
       }
     },
     {
+      "name": "windows",
+      "displayName": "Windows (MinGW-w64, static Qt)",
+      "description": "Cross build of a self-contained Windows TonePlayer.exe via cmake/mingw-static.cmake",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-win",
+      "toolchainFile": "${sourceDir}/cmake/mingw-static.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "TONE_PLAYER_LANGUAGE": "en",
+        "TONE_PLAYER_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
       "name": "san",
       "displayName": "Debug + ASan/UBSan",
       "description": "Debug build with address and undefined behavior sanitizers",
@@ -52,6 +65,10 @@
     {
       "name": "debug",
       "configurePreset": "debug"
+    },
+    {
+      "name": "windows",
+      "configurePreset": "windows"
     },
     {
       "name": "san",

@@ -5,17 +5,36 @@
 
 set positional-arguments
 
-presets := "release debug san"
-build_dirs := "build build-dev build-san"
+presets := "release debug san windows"
+build_dirs := "build build-dev build-san build-win"
 
 # Default: optimized release build.
 default: release
 
-# Configure + build a preset (release|debug|san).
+# Configure + build a preset (release|debug|san|windows).
 build preset="release":
     @just --justfile {{justfile()}} _check_preset {{preset}}
     cmake --preset {{preset}}
     cmake --build --preset {{preset}} --parallel
+
+# Cross build of a self-contained Windows TonePlayer.exe via cmake/mingw-static.cmake (needs ownstuff static Qt packages).
+windows-static:
+    cmake --preset windows
+    cmake --build --preset windows --parallel
+    echo "built: build-win/TonePlayer.exe (self-contained: Qt + deps static)"
+
+# Assemble the release bundle in dist/: patched CKM2PO.exe + TonePlayer.exe + settings.json + the CKM2PO UsbDrv.dll proxy.
+dist ckm2po_repo="../CKM2PO":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just --justfile {{justfile()}} windows-static
+    mkdir -p dist
+    cp build-win/TonePlayer.exe dist/TonePlayer.exe
+    cp settings.json dist/settings.json
+    cp "{{ckm2po_repo}}/analysis/tonebutton/UsbDrv.dll" dist/UsbDrv.dll
+    # patched CKM2PO: family-1 device-match relax (VM-verified, see analysis/patched/CKM2PO-variantA.exe)
+    cp "{{ckm2po_repo}}/analysis/patched/CKM2PO-variantA.exe" dist/CKM2PO.exe
+    echo "dist/: CKM2PO.exe TonePlayer.exe settings.json UsbDrv.dll"
 
 # Optimized release build (the shippable one).
 release:
@@ -29,11 +48,11 @@ debug:
 san:
     @just --justfile {{justfile()}} build san
 
-# Build every preset in turn.
+# Build every Linux preset in turn (not the Windows cross build).
 all:
     #!/usr/bin/env bash
     set -euo pipefail
-    for preset in {{presets}}; do
+    for preset in release debug san; do
         echo ":: $preset"
         just --justfile {{justfile()}} build "$preset"
     done

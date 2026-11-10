@@ -81,6 +81,14 @@ public:
     /// @brief Returns the player controlled by the window.
     [[nodiscard]] audio::TonePlayer &player() noexcept { return *player_; }
 
+    /// @brief Answers one remote IPC call; used by the named pipe server.
+    /// @param name Call name, case-insensitive: status|play|stop|toggle.
+    /// @param args Arguments after the name (zero or more).
+    /// @return One-line player summary, e.g.
+    /// `state=playing tone=1/20 frequency=500Hz remaining=200.0s autoplay=on master=+0.0dB`.
+    /// @throws std::runtime_error with a user-readable description on failure.
+    QString handleRemoteCall(const QString &name, const QStringList &args);
+
     /// @brief Saves pending changes before the window closes.
     /// @param event Close event.
     void closeEvent(QCloseEvent *event) override;

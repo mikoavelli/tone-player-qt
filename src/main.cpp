@@ -5,6 +5,7 @@
 #include "audio_engine.h"
 #include "errors.h"
 #include "i18n.h"
+#include "ipc.h"
 #include "models.h"
 #include "settings_store.h"
 #include "ui/main_window.h"
@@ -98,6 +99,17 @@ int main(int argc, char *argv[])
         const tp::Settings settings =
             tp::settings_store::loadSettingsAtStartup(settingsPath);
         tp::ui::MainWindow window(settings, settingsPath);
+
+        // Named pipe `\\.\pipe\tone-player`: what the CKM2PO proxy and similar
+        // tools talk to. Failure to open the pipe is not fatal — the window
+        // works without remote control.
+        tp::ipc::IpcServer ipc(
+            [&window](const QString &name, const QStringList &args) {
+                return window.handleRemoteCall(name, args);
+            },
+            &window);
+        static_cast<void>(ipc.listen());
+
         window.show();
         return app.exec();
     } catch (const SettingsNotFoundError &error) {
