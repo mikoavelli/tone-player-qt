@@ -161,3 +161,9 @@ src/                      Domain logic: models, settings store, presets,
 src/ui/                   Widgets: level sliders, ruler, band columns,
                           settings dialog, main window
 ```
+
+---
+
+## License
+
+This project is open-source and released under the [MIT License](LICENSE).
