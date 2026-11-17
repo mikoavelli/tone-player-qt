@@ -77,6 +77,10 @@ target_link_libraries(tone-player-qt PRIVATE Qt6::Widgets Qt6::Multimedia Qt6::N
 # Static MinGW dependencies of the system freetype that Qt's wrap does not know.
 if(WIN32)
     target_link_libraries(tone-player-qt PRIVATE graphite2 bz2)
+    # Release binary must not keep DWARF from the static Qt/FFmpeg archives
+    # (~15 MB of .debug_* sections otherwise). -s strips symbols and debug
+    # info at link time; for debugging a dependencies build was needed anyway.
+    target_link_options(tone-player-qt PRIVATE -s)
 endif()
 
 # Windows deliverable is named TonePlayer.exe (see the release bundle).

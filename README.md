@@ -65,7 +65,7 @@ of the existing СКМ2ПО installation with it:
 | `CKM2PO.exe` | Patched СКМ2ПО (variant A: device-match relax, 4 NOP'd JNZ guards in `FUN_00589240`; no serial/description gating). Deployed and verified on the Win10 test VM; the provenance build is `~/Projects/CKM2PO/analysis/patched/CKM2PO-variantA.exe`, sha256 `fca2b18b70536ab27032aaa1762e2b5e875626173402419f550cf238e1653aab`. |
 | `UsbDrv.dll` | The СКМ2ПО FTDI proxy (source `analysis/tonebutton/tonebtn.c`): forwards the 8 genuine FT_* exports to `UsbDrv_orig.dll` (below), and paints the APP (open TonePlayer) and TONE (play/stop) buttons on the toolbar. |
 | `UsbDrv_orig.dll` | The **stock FTDI D2XX** `UsbDrv.dll`, renamed — required by the proxy and shipped verbatim for drop-in installation (sha256 `52173afbb38c95fb0e8f74e727bf353e470a05706c44a0807bad15aee95b9631`). Without it the proxy cannot forward the FT_* calls and СКМ2ПО sees no device. |
-| `TonePlayer.exe` | The Qt port itself — self-contained: Qt and all dependencies are statically linked, no Qt DLLs needed. |
+| `TonePlayer.exe` | The Qt port itself — self-contained: Qt and all dependencies are statically linked, no Qt DLLs needed. Release binary is linked with `-s` (symbols/debug info stripped; ~40 MB). |
 | `settings.json` | Tones 1..20 (500 Hz..10000 Hz, 10 s each). |
 
 Installation on a Windows host (installs into the СКМ2ПО directory, e.g.
