@@ -32,9 +32,11 @@ dist ckm2po_repo="../CKM2PO":
     cp build-win/TonePlayer.exe dist/TonePlayer.exe
     cp settings.json dist/settings.json
     cp "{{ckm2po_repo}}/analysis/tonebutton/UsbDrv.dll" dist/UsbDrv.dll
+    # stock FTDI D2XX, renamed so the proxy can forward the 8 FT_* exports it needs
+    cp "{{ckm2po_repo}}/analysis/extracted/app/UsbDrv.dll" dist/UsbDrv_orig.dll
     # patched CKM2PO: family-1 device-match relax (VM-verified, see analysis/patched/CKM2PO-variantA.exe)
     cp "{{ckm2po_repo}}/analysis/patched/CKM2PO-variantA.exe" dist/CKM2PO.exe
-    echo "dist/: CKM2PO.exe TonePlayer.exe settings.json UsbDrv.dll"
+    echo "dist/: CKM2PO.exe TonePlayer.exe settings.json UsbDrv.dll UsbDrv_orig.dll"
 
 # Optimized release build (the shippable one).
 release:

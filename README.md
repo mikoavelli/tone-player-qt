@@ -51,29 +51,33 @@ just settings     # copy settings.json into every build directory
 just lang ru      # release build with another compiled-in language
 just windows      # Windows: build + windeployqt into build/package
 just windows-static  # Windows cross build (self-contained exe) → build-win/
-just dist         # assemble dist/ release: CKM2PO.exe (patched) + TonePlayer.exe + settings.json + UsbDrv.dll
+just dist         # assemble dist/ release: CKM2PO.exe (patched) + TonePlayer.exe + settings.json + UsbDrv.dll + UsbDrv_orig.dll
 just clean        # remove all preset build directories
 ```
 
 ### Windows release bundle
 
-The deliverable is a **4-file set** in `dist/`:
+The deliverable is a **5-file set** in `dist/` — replace the corresponding files
+of the existing СКМ2ПО installation with it:
 
 | File | What it is |
 |------|------------|
-| `CKM2PO.exe` | Patched СКМ2ПО (variant A: device-match relax, 4 NOP'd JNZ guards in `FUN_00589240`; no serial/description gating). Deployed and verified on the Win10 test VM; the empty-editor build host is `~/Projects/CKM2PO/analysis/patched/CKM2PO-variantA.exe`, sha256 `fca2b18b70536ab27032aaa1762e2b5e875626173402419f550cf238e1653aab`. |
-| `UsbDrv.dll` | The СКМ2ПО FTDI proxy (source `analysis/tonebutton/tonebtn.c`): forwards the 8 genuine FT_* exports to the `UsbDrv_orig.dll` you rename the stock one to, and paints the APP (open TonePlayer) and TONE (play/stop) buttons on the toolbar. |
+| `CKM2PO.exe` | Patched СКМ2ПО (variant A: device-match relax, 4 NOP'd JNZ guards in `FUN_00589240`; no serial/description gating). Deployed and verified on the Win10 test VM; the provenance build is `~/Projects/CKM2PO/analysis/patched/CKM2PO-variantA.exe`, sha256 `fca2b18b70536ab27032aaa1762e2b5e875626173402419f550cf238e1653aab`. |
+| `UsbDrv.dll` | The СКМ2ПО FTDI proxy (source `analysis/tonebutton/tonebtn.c`): forwards the 8 genuine FT_* exports to `UsbDrv_orig.dll` (below), and paints the APP (open TonePlayer) and TONE (play/stop) buttons on the toolbar. |
+| `UsbDrv_orig.dll` | The **stock FTDI D2XX** `UsbDrv.dll`, renamed — required by the proxy and shipped verbatim for drop-in installation (sha256 `52173afbb38c95fb0e8f74e727bf353e470a05706c44a0807bad15aee95b9631`). Without it the proxy cannot forward the FT_* calls and СКМ2ПО sees no device. |
 | `TonePlayer.exe` | The Qt port itself — self-contained: Qt and all dependencies are statically linked, no Qt DLLs needed. |
 | `settings.json` | Tones 1..20 (500 Hz..10000 Hz, 10 s each). |
 
 Installation on a Windows host (installs into the СКМ2ПО directory, e.g.
 `C:\CKM2PO\`):
 
-1. Stop СКМ2ПО; rename the stock `UsbDrv.dll` → `UsbDrv_orig.dll`.
-2. Copy the four files from `dist/` next to `CKM2PO.exe` (they replace it).
+1. Stop СКМ2ПО.
+2. Copy the five files from `dist/` next to `CKM2PO.exe`, replacing the stock ones
+   (`CKM2PO.exe`, `UsbDrv.dll`); `UsbDrv_orig.dll` is the renamed stock FTDI
+   driver, so the proxy finds it next to itself.
 3. Start СКМ2ПО; check the APP and TONE buttons top-right, and `tonebtn.log`
-   next to `UsbDrv.dll` for `ini absent -> default TonePlayerExe=` — the proxy takes
-   the exe location next to itself, no `.ini` required.
+   next to `UsbDrv.dll` for `orig dll ... h=10000000 gle=0` (the proxy loaded the
+   stock driver) and `ini absent -> default TonePlayerExe=`.
 
 `just windows-static` cross-compiles the bundle with MinGW-w64 against the static
 Qt 6.12 packages from Ark's `ownstuff` repository
